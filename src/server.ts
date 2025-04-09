@@ -4,14 +4,15 @@ import { knex } from "./database"
 
 const app = fastify()
 
-app.get('/diet', async () => {
+app.get('/register-meal', async () => {
   const diet = await knex('diets').insert({
     id: randomUUID(),
-    name: 'Test Daily Diet',
-    description: 'First diet of the day',
-    in_diet: true
+    name: 'Pizza',
+    description: 'Pepperoni with Cheese',
+    in_diet: false
 
   })
+    .returning('*')
 
   return diet
 })
