@@ -1,15 +1,11 @@
-import 'dotenv/config'
 import { Knex, knex as setupKnex } from 'knex'
-
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL env not found.')
-}
+import { env } from './env'
 
 export const config: Knex.Config = ({
   client: 'sqlite',
   useNullAsDefault: true,
   connection: {
-    filename: process.env.DATABASE_URL
+    filename: env.DATABASE_URL
   },
   migrations: {
     extension: 'ts',
@@ -19,4 +15,3 @@ export const config: Knex.Config = ({
 
 export const knex = setupKnex(config)
 
-//creates migration to add-session-id-to-diets
