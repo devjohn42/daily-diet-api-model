@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify"
 import { randomUUID } from "node:crypto"
 import { z } from 'zod'
 import { knex } from "../database"
+import { dateFormatter } from "../helpers/date-formatter"
 
 export const mealsRoutes = async (app: FastifyInstance) => {
   app.post('/', async (req, res) => {
@@ -18,7 +19,7 @@ export const mealsRoutes = async (app: FastifyInstance) => {
       name,
       description,
       in_diet,
-      created_at: new Date()
+      created_at: dateFormatter(new Date())
     })
 
     return res.status(201).send()
