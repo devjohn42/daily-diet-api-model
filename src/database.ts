@@ -18,3 +18,5 @@ export const config: Knex.Config = ({
 })
 
 export const knex = setupKnex(config)
+
+//creates migration to add-session-id-to-diets
