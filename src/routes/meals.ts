@@ -5,7 +5,7 @@ import { knex } from "../database"
 import { dateFormatter } from "../helpers/date-formatter"
 
 export const mealsRoutes = async (app: FastifyInstance) => {
-  app.post('/', async (req, res) => {
+  app.post('/create-meal', async (req, res) => {
     const createMealsBodySchema = z.object({
       name: z.string(),
       description: z.string(),
