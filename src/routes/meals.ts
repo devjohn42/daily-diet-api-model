@@ -14,12 +14,23 @@ export const mealsRoutes = async (app: FastifyInstance) => {
 
     const { name, description, in_diet } = createMealsBodySchema.parse(req.body)
 
+    const sessionId = req.cookies.sessionId
+
+    // Verifica se o sessionId é válido
+    const user = await knex('users').where({ session_id: sessionId }).first()
+
+    if (!user) {
+      return res.status(401).send({ error: 'Unauthorized: Invalid sessionId' })
+    }
+
+    // Cria a refeição associada ao usuário
     await knex('meals').insert({
       id: randomUUID(),
       name,
       description,
       in_diet,
-      created_at: dateFormatter(new Date())
+      created_at: dateFormatter(new Date()),
+      session_id: sessionId
     })
 
     return res.status(201).send()
