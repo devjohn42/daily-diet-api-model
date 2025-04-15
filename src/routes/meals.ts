@@ -65,5 +65,29 @@ export const mealsRoutes = async (app: FastifyInstance) => {
   })
 
   // patch '/:id'
+  app.patch('/meals/:id', async (req, res) => {
+    const getMealParamsSchema = z.object({
+      id: z.string().uuid(),
+    })
+
+    const updateMealBodySchema = z.object({
+      name: z.string().optional(),
+      description: z.string().optional(),
+      in_diet: z.boolean().optional()
+    })
+
+    const { id } = getMealParamsSchema.parse(req.params)
+
+    const { name, description, in_diet } = updateMealBodySchema.parse(req.body)
+
+    const meal = await knex('meals').where({ id }).first();
+
+    if (!meal) {
+      return res.status(404).send({ error: 'Meal not found' });
+    }
+
+    await knex('meals').where({ id }).update({ name, description, in_diet })
+  })
+
   // delete '/:id'
 }
