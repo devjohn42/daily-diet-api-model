@@ -37,7 +37,7 @@ export const usersRoutes = async (app: FastifyInstance) => {
   })
 
   // get '/list-users'
-  app.get('/users', async (req, res) => {
+  app.get('/list-users', async (req, res) => {
     const users = await knex('users').select()
 
     return {

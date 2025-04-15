@@ -39,8 +39,31 @@ export const mealsRoutes = async (app: FastifyInstance) => {
 
     return res.status(201).send()
   })
+
   // get '/list-meals'
+  app.get('/list-meals', async (req, res) => {
+    const meals = await knex('meals').select()
+
+    return {
+      meals
+    }
+  })
+
   // get '/:id'
+  app.get('/meals/:id', async (req, res) => {
+    const getMealParamsSchema = z.object({
+      id: z.string().uuid()
+    })
+
+    const { id } = getMealParamsSchema.parse(req.params)
+
+    const meal = await knex('meals').where({ id }).first()
+
+    return {
+      meal
+    }
+  })
+
   // patch '/:id'
   // delete '/:id'
 }
