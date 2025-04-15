@@ -4,6 +4,10 @@ import { z } from 'zod'
 import { knex } from "../database"
 
 export const usersRoutes = async (app: FastifyInstance) => {
+  app.addHook('preHandler', async (req, res) => {
+    console.log(`[${req.method}] ${req.url}`)
+  })
+
   app.post('/create-user', async (req, res) => {
     const createUserBodySchema = z.object({
       name: z.string(),
@@ -30,5 +34,30 @@ export const usersRoutes = async (app: FastifyInstance) => {
     })
 
     return res.status(201).send()
+  })
+
+  // get '/list-users'
+  app.get('/users', async (req, res) => {
+    const users = await knex('users').select()
+
+    return {
+      users
+    }
+  })
+
+  // get '/:id'
+  app.get('/users/:id', async (req, res) => {
+
+    const getUserParamsSchema = z.object({
+      id: z.string().uuid()
+    })
+
+    const { id } = getUserParamsSchema.parse(req.params)
+
+    const user = await knex('users').where({ id }).first()
+
+    return {
+      user
+    }
   })
 }

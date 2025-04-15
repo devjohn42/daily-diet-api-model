@@ -5,6 +5,10 @@ import { knex } from "../database"
 import { dateFormatter } from "../helpers/date-formatter"
 
 export const mealsRoutes = async (app: FastifyInstance) => {
+  app.addHook('preHandler', async (req, res) => {
+    console.log(`[${req.method}] ${req.url}`)
+  })
+
   app.post('/create-meal', async (req, res) => {
     const createMealsBodySchema = z.object({
       name: z.string(),
@@ -35,4 +39,8 @@ export const mealsRoutes = async (app: FastifyInstance) => {
 
     return res.status(201).send()
   })
+  // get '/list-meals'
+  // get '/:id'
+  // patch '/:id'
+  // delete '/:id'
 }
