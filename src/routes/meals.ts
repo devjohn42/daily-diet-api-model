@@ -59,6 +59,10 @@ export const mealsRoutes = async (app: FastifyInstance) => {
 
     const meal = await knex('meals').where({ id }).first()
 
+    if (!meal) {
+      return res.status(404).send({ error: 'Meal not found' });
+    }
+
     return {
       meal
     }
@@ -90,4 +94,19 @@ export const mealsRoutes = async (app: FastifyInstance) => {
   })
 
   // delete '/:id'
+  app.delete('/meals/:id', async (req, res) => {
+    const getMealParamsSchema = z.object({
+      id: z.string().uuid(),
+    })
+
+    const { id } = getMealParamsSchema.parse(req.params)
+
+    const meal = await knex('meals').where({ id }).first();
+
+    if (!meal) {
+      return res.status(404).send({ error: 'Meal not found' });
+    }
+
+    await knex('meals').where({ id }).delete()
+  })
 }
