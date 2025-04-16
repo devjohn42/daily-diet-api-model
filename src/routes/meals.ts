@@ -3,11 +3,14 @@ import { randomUUID } from "node:crypto"
 import { z } from 'zod'
 import { knex } from "../database"
 import { dateFormatter } from "../helpers/date-formatter"
+import { checkSessionIdExists } from "../middlewares/check-session-id-exists"
 
 export const mealsRoutes = async (app: FastifyInstance) => {
   app.addHook('preHandler', async (req, res) => {
     console.log(`[${req.method}] ${req.url}`)
   })
+
+  app.addHook('preHandler', checkSessionIdExists)
 
   app.post('/create-meal', async (req, res) => {
     const createMealsBodySchema = z.object({
@@ -21,7 +24,9 @@ export const mealsRoutes = async (app: FastifyInstance) => {
     const sessionId = req.cookies.sessionId
 
     // Verifica se o sessionId é válido
-    const user = await knex('users').where({ session_id: sessionId }).first()
+    const user = await knex('users')
+      .where({ session_id: sessionId })
+      .first()
 
     if (!user) {
       return res.status(401).send({ error: 'Unauthorized: Invalid sessionId' })
@@ -42,7 +47,11 @@ export const mealsRoutes = async (app: FastifyInstance) => {
 
   // get '/list-meals'
   app.get('/list-meals', async (req, res) => {
-    const meals = await knex('meals').select()
+    const sessionId = req.cookies.sessionId;
+
+    const meals = await knex('meals')
+      .where({ session_id: sessionId })
+      .select()
 
     return {
       meals
@@ -57,7 +66,12 @@ export const mealsRoutes = async (app: FastifyInstance) => {
 
     const { id } = getMealParamsSchema.parse(req.params)
 
-    const meal = await knex('meals').where({ id }).first()
+    const sessionId = req.cookies.sessionId;
+
+    const meal = await knex('meals')
+      .where({ id })
+      .andWhere({ session_id: sessionId })
+      .first()
 
     if (!meal) {
       return res.status(404).send({ error: 'Meal not found' });
@@ -84,13 +98,20 @@ export const mealsRoutes = async (app: FastifyInstance) => {
 
     const { name, description, in_diet } = updateMealBodySchema.parse(req.body)
 
-    const meal = await knex('meals').where({ id }).first();
+    const sessionId = req.cookies.sessionId;
+
+    const meal = await knex('meals')
+      .where({ id })
+      .andWhere({ session_id: sessionId })
+      .first();
 
     if (!meal) {
       return res.status(404).send({ error: 'Meal not found' });
     }
 
-    await knex('meals').where({ id }).update({ name, description, in_diet })
+    await knex('meals')
+      .where({ id })
+      .update({ name, description, in_diet })
   })
 
   // delete '/:id'
@@ -101,7 +122,12 @@ export const mealsRoutes = async (app: FastifyInstance) => {
 
     const { id } = getMealParamsSchema.parse(req.params)
 
-    const meal = await knex('meals').where({ id }).first();
+    const sessionId = req.cookies.sessionId;
+
+    const meal = await knex('meals')
+      .where({ id })
+      .andWhere({ session_id: sessionId })
+      .first();
 
     if (!meal) {
       return res.status(404).send({ error: 'Meal not found' });
