@@ -6,6 +6,12 @@ export async function up(knex: Knex): Promise<void> {
     table.uuid('id').primary()
     table.text('name').notNullable()
     table.text('email').notNullable()
+    table.json('metrics').notNullable().defaultTo(JSON.stringify({
+      totalMeals: 0,
+      totalMealsInDiet: 0,
+      totalMealsOutDiet: 0,
+      sequenceOfMealsInTheDiet: 0
+    }))
   })
 }
 

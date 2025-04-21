@@ -18,13 +18,20 @@ export const usersRoutes = async (app: FastifyInstance) => {
 
     // Gera um novo sessionId para cada usuário criado
     const sessionId = randomUUID()
+    const metrics = {
+      totalMeals: 0,
+      totalMealsInDiet: 0,
+      totalMealsOutDiet: 0,
+      sequenceOfMealsInTheDiet: 0
+    }
 
     // Salva o usuário criado no banco de dados com o sessionId
     await knex('users').insert({
       id: randomUUID(),
       name,
       email,
-      session_id: sessionId
+      session_id: sessionId,
+      metrics
     })
 
     // Envia o sessionId como um cookie para o cliente
@@ -40,6 +47,11 @@ export const usersRoutes = async (app: FastifyInstance) => {
   app.get('/list-users', async (req, res) => {
     const users = await knex('users').select()
 
+    users.forEach(user => {
+      if (typeof user.metrics === 'string') {
+        user.metrics = JSON.parse(user.metrics)
+      }
+    })
     return {
       users
     }
@@ -56,6 +68,9 @@ export const usersRoutes = async (app: FastifyInstance) => {
 
     const user = await knex('users').where({ id }).first()
 
+    if (user && typeof user.metrics === 'string') {
+      user.metrics = JSON.parse(user.metrics)
+    }
     return {
       user
     }
