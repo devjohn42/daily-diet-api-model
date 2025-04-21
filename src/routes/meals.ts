@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { knex } from "../database"
 import { dateFormatter } from "../helpers/date-formatter"
 import { checkSessionIdExists } from "../middlewares/check-session-id-exists"
+import { updateTotalMeals } from "../services/user-metrics-service"
 
 export const mealsRoutes = async (app: FastifyInstance) => {
   app.addHook('preHandler', async (req, res) => {
@@ -21,7 +22,7 @@ export const mealsRoutes = async (app: FastifyInstance) => {
 
     const { name, description, in_diet } = createMealsBodySchema.parse(req.body)
 
-    const sessionId = req.cookies.sessionId
+    const sessionId = req.cookies.sessionId as string | undefined
 
     // Verifica se o sessionId é válido
     const user = await knex('users')
@@ -41,6 +42,11 @@ export const mealsRoutes = async (app: FastifyInstance) => {
       created_at: dateFormatter(new Date()),
       session_id: sessionId
     })
+
+    if (!sessionId) {
+      return res.status(400).send({ error: 'Session ID is required' });
+    }
+    await updateTotalMeals(sessionId, true)
 
     return res.status(201).send()
   })
@@ -134,5 +140,10 @@ export const mealsRoutes = async (app: FastifyInstance) => {
     }
 
     await knex('meals').where({ id }).delete()
+
+    if (!sessionId) {
+      return res.status(400).send({ error: 'Session ID is required' });
+    }
+    await updateTotalMeals(sessionId, false)
   })
 }

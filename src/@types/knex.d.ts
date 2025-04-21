@@ -7,7 +7,7 @@ declare module 'knex/types/tables' {
       name: string
       email: string
       session_id: string
-      metrics: {
+      metrics: string | {
         totalMeals: number;
         totalMealsInDiet: number;
         totalMealsOutDiet: number;
