@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { knex } from "../database"
 import { dateFormatter } from "../helpers/date-formatter"
 import { checkSessionIdExists } from "../middlewares/check-session-id-exists"
-import { updateMealsInDiet, updateTotalMeals } from "../services/user-metrics-service"
+import { updateMealsInDiet, updateSequenceOfMealsInDiet, updateTotalMeals } from "../services/user-metrics-service"
 
 export const mealsRoutes = async (app: FastifyInstance) => {
   app.addHook('preHandler', async (req, res) => {
@@ -48,6 +48,7 @@ export const mealsRoutes = async (app: FastifyInstance) => {
     }
     await updateTotalMeals(sessionId, true)
     await updateMealsInDiet(sessionId, in_diet, true)
+    await updateSequenceOfMealsInDiet(sessionId)
 
     return res.status(201).send()
   })
@@ -116,10 +117,11 @@ export const mealsRoutes = async (app: FastifyInstance) => {
       return res.status(404).send({ error: 'Meal not found' });
     }
 
+    if (!sessionId) {
+      return res.status(400).send({ error: 'Session ID is required' });
+    }
+
     if (meal.in_diet !== in_diet) {
-      if (!sessionId) {
-        return res.status(400).send({ error: 'Session ID is required' });
-      }
       await updateMealsInDiet(sessionId, meal.in_diet, false)
       await updateMealsInDiet(sessionId, meal.in_diet, true)
     }
@@ -127,6 +129,10 @@ export const mealsRoutes = async (app: FastifyInstance) => {
     await knex('meals')
       .where({ id })
       .update({ name, description, in_diet })
+
+    await updateSequenceOfMealsInDiet(sessionId)
+
+    return res.status(200).send()
   })
 
   // delete '/:id'
@@ -155,5 +161,6 @@ export const mealsRoutes = async (app: FastifyInstance) => {
     }
     await updateTotalMeals(sessionId, false)
     await updateMealsInDiet(sessionId, meal.in_diet, false)
+    await updateSequenceOfMealsInDiet(sessionId)
   })
 }

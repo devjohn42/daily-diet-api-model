@@ -16,5 +16,5 @@
   [x] Quantidade total de refeições registradas
   [x] Quantidade total de refeições dentro da dieta
   [x] Quantidade total de refeições fora da dieta
-  [] Melhor sequência de refeições dentro da dieta
+  [x] Melhor sequência de refeições dentro da dieta
 [x] O usuário só pode visualizar, editar e apagar as refeições ao qual ele criou
