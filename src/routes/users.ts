@@ -10,38 +10,50 @@ export const usersRoutes = async (app: FastifyInstance) => {
 
   // post '/create-user'
   app.post('/create-user', async (req, res) => {
-    const createUserBodySchema = z.object({
-      name: z.string(),
-      email: z.string()
-    })
+    try {
+      const createUserBodySchema = z.object({
+        name: z.string().min(3, 'Name must be at least 3 characters long'),
+        email: z.string().email()
+      })
 
-    const { name, email } = createUserBodySchema.parse(req.body)
+      const { name, email } = createUserBodySchema.parse(req.body)
 
-    // Gera um novo sessionId para cada usuário criado
-    const sessionId = randomUUID()
-    const metrics = {
-      totalMeals: 0,
-      totalMealsInDiet: 0,
-      totalMealsOutDiet: 0,
-      sequenceOfMealsInTheDiet: 0
+      // Gera um novo sessionId para cada usuário criado
+      const sessionId = randomUUID()
+      const metrics = {
+        totalMeals: 0,
+        totalMealsInDiet: 0,
+        totalMealsOutDiet: 0,
+        sequenceOfMealsInTheDiet: 0
+      }
+
+      // Salva o usuário criado no banco de dados com o sessionId
+      await knex('users').insert({
+        id: randomUUID(),
+        name,
+        email,
+        session_id: sessionId,
+        metrics
+      })
+
+      // Envia o sessionId como um cookie para o cliente
+      res.cookie('sessionId', sessionId, {
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7 // 7 days
+      })
+
+      return res.status(201).send()
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).send({
+          error: 'Validation error',
+          details: error.errors
+        })
+      }
+
+      console.log(error)
+      return res.status(500).send({ error: 'Internal Server Error' })
     }
-
-    // Salva o usuário criado no banco de dados com o sessionId
-    await knex('users').insert({
-      id: randomUUID(),
-      name,
-      email,
-      session_id: sessionId,
-      metrics
-    })
-
-    // Envia o sessionId como um cookie para o cliente
-    res.cookie('sessionId', sessionId, {
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7 // 7 days
-    })
-
-    return res.status(201).send()
   })
 
   // get '/list-users'
