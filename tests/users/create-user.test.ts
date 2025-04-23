@@ -17,6 +17,7 @@ afterAll(async () => {
 beforeEach(() => {
   execSync('npm run knex:rollback-all')
   execSync('npm run knex:migrate-run')
+
 })
 
 describe('Creates User', () => {
@@ -54,5 +55,23 @@ describe('Creates User', () => {
     // Verifica se a mensagem de erro está presente
     expect(response.body).toHaveProperty('error', 'Validation error');
   })
-  it.todo('should not be able to create a user with duplicate email', async () => { })
+  it('should not be able to create a user with duplicate email', async () => {
+    await request(app.server)
+      .post('/user/create-user')
+      .send({
+        name: 'John Doe',
+        email: 'johndoe@example.com',
+      });
+
+    const response = await request(app.server)
+      .post('/user/create-user')
+      .send({
+        name: 'Johnny Doe',
+        email: 'johndoe@example.com',
+      });
+
+
+    expect(response.status).toBe(400);
+    expect(response.body).toHaveProperty('error', 'Email already in use')
+  })
 })
