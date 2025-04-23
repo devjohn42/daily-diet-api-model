@@ -8,6 +8,7 @@ export const usersRoutes = async (app: FastifyInstance) => {
     console.log(`[${req.method}] ${req.url}`)
   })
 
+  // post '/create-user'
   app.post('/create-user', async (req, res) => {
     const createUserBodySchema = z.object({
       name: z.string(),

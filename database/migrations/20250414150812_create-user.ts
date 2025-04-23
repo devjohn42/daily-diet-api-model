@@ -5,7 +5,7 @@ export async function up(knex: Knex): Promise<void> {
   await knex.schema.createTable('users', (table) => {
     table.uuid('id').primary()
     table.text('name').notNullable()
-    table.text('email').notNullable()
+    table.text('email').notNullable().unique()
     table.json('metrics').notNullable().defaultTo(JSON.stringify({
       totalMeals: 0,
       totalMealsInDiet: 0,

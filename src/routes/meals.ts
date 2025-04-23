@@ -13,6 +13,7 @@ export const mealsRoutes = async (app: FastifyInstance) => {
 
   app.addHook('preHandler', checkSessionIdExists)
 
+  // post '/create-meal'
   app.post('/create-meal', async (req, res) => {
     const createMealsBodySchema = z.object({
       name: z.string(),
