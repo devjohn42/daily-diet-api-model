@@ -58,16 +58,26 @@ export const usersRoutes = async (app: FastifyInstance) => {
 
   // get '/list-users'
   app.get('/list-users', async (req, res) => {
-    const users = await knex('users').select()
+    try {
+      const users = await knex('users').select()
 
-    users.forEach(user => {
-      if (typeof user.metrics === 'string') {
-        user.metrics = JSON.parse(user.metrics)
-      }
-    })
-    return {
-      users
+      // if (users.length === 0) {
+      //   return res.status(404).send({ error: 'No users found' });
+      // }
+
+      users.forEach(user => {
+        if (typeof user.metrics === 'string') {
+          user.metrics = JSON.parse(user.metrics)
+        }
+      })
+      return res.status(200).send({ users })
+    } catch (error) {
+      console.log(error)
+      return res.status(500).send({
+        error: 'Internal Server Error'
+      })
     }
+
   })
 
   // get '/:id'
