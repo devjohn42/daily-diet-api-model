@@ -13,10 +13,18 @@ export const usersRoutes = async (app: FastifyInstance) => {
     try {
       const createUserBodySchema = z.object({
         name: z.string().min(3, 'Name must be at least 3 characters long'),
-        email: z.string().email()
+        email: z.string().email('Invalid email format')
       })
 
       const { name, email } = createUserBodySchema.parse(req.body)
+
+      const existintUser = await knex('users').where({ email }).first()
+
+      if (existintUser) {
+        return res.status(400).send({
+          error: 'Email already in use'
+        })
+      }
 
       // Gera um novo sessionId para cada usuário criado
       const sessionId = randomUUID()
@@ -82,20 +90,36 @@ export const usersRoutes = async (app: FastifyInstance) => {
 
   // get '/:id'
   app.get('/users/:id', async (req, res) => {
+    try {
+      const getUserParamsSchema = z.object({
+        id: z.string().uuid()
+      })
 
-    const getUserParamsSchema = z.object({
-      id: z.string().uuid()
-    })
+      const { id } = getUserParamsSchema.parse(req.params)
 
-    const { id } = getUserParamsSchema.parse(req.params)
+      const user = await knex('users').where({ id }).first()
 
-    const user = await knex('users').where({ id }).first()
-
-    if (user && typeof user.metrics === 'string') {
-      user.metrics = JSON.parse(user.metrics)
+      if (user && typeof user.metrics === 'string') {
+        user.metrics = JSON.parse(user.metrics)
+      }
+      if (user?.id !== id) {
+        res.status(404).send({
+          error: 'User Not Found'
+        })
+      }
+      return res.status(200).send({ user })
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(404).send({
+          error: 'User Not Found',
+          details: error.errors
+        })
+      }
+      console.log(error)
+      return res.send(500).send({
+        error: 'Internal Server Error'
+      })
     }
-    return {
-      user
-    }
+
   })
 }

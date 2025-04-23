@@ -7,16 +7,15 @@ import { knex } from '../../src/database'
 
 beforeAll(async () => {
   await knex('users').truncate()
+
+  execSync('npm run knex:rollback-all')
+  execSync('npm run knex:migrate-run')
+
   await app.ready()
 })
 
 afterAll(async () => {
   await app.close()
-})
-
-beforeEach(() => {
-  execSync('npm run knex:rollback-all')
-  execSync('npm run knex:migrate-run')
 })
 
 // GET '/list-users'
@@ -45,8 +44,8 @@ describe('Get users list tests', () => {
   it('should return users with the correct structure', async () => {
     await knex('users').insert({
       id: randomUUID(),
-      name: 'John Doe',
-      email: 'johndoe@example.com',
+      name: 'Andrew Doe',
+      email: 'andrewdoe@example.com',
       session_id: 'john-session',
       metrics: JSON.stringify({
         totalMeals: 0,
