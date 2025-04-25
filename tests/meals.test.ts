@@ -82,6 +82,31 @@ describe('Meals Routes', () => {
       }
 
     })
+    it('should not be able to create a meal with invalid data', async () => {
+      const response = await request(app.server)
+        .post('/meal/create-meal')
+        .set('Cookie', [`sessionId=${sessionIdPhill}`])
+        .send({
+          name: '', // Inválido
+          description: 'Invalid meal',
+          in_diet: 'not-a-boolean' // Inválido
+        })
+
+      expect(response.status).toBe(400)
+      expect(response.body).toHaveProperty('error', 'Validation error')
+    })
+    it('should not be able to create a meal without a sessionId', async () => {
+      const response = await request(app.server)
+        .post('/meal/create-meal')
+        .send({
+          name: 'Lunch',
+          description: 'Grilled chicken with salad',
+          in_diet: true
+        })
+
+      expect(response.status).toBe(401)
+      expect(response.body).toHaveProperty('error', 'Unauthorized!') // o valor do erro precisa ser o mesmo feito no check-session-id-exists.ts
+    })
   })
 
   // GET '/list-meals'
