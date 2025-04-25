@@ -15,43 +15,56 @@ export const mealsRoutes = async (app: FastifyInstance) => {
 
   // post '/create-meal'
   app.post('/create-meal', async (req, res) => {
-    const createMealsBodySchema = z.object({
-      name: z.string(),
-      description: z.string(),
-      in_diet: z.boolean()
-    })
+    try {
+      const createMealsBodySchema = z.object({
+        name: z.string(),
+        description: z.string(),
+        in_diet: z.boolean()
+      })
 
-    const { name, description, in_diet } = createMealsBodySchema.parse(req.body)
+      const { name, description, in_diet } = createMealsBodySchema.parse(req.body)
 
-    const sessionId = req.cookies.sessionId as string | undefined
+      const sessionId = req.cookies.sessionId as string | undefined
 
-    // Verifica se o sessionId é válido
-    const user = await knex('users')
-      .where({ session_id: sessionId })
-      .first()
+      // Verifica se o sessionId é válido
+      const user = await knex('users')
+        .where({ session_id: sessionId })
+        .first()
 
-    if (!user) {
-      return res.status(401).send({ error: 'Unauthorized: Invalid sessionId' })
+      if (!user) {
+        return res.status(401).send({ error: 'Unauthorized: Invalid sessionId' })
+      }
+
+      // Cria a refeição associada ao usuário
+      await knex('meals').insert({
+        id: randomUUID(),
+        name,
+        description,
+        in_diet,
+        created_at: dateFormatter(new Date()),
+        session_id: sessionId
+      })
+
+      if (!sessionId) {
+        return res.status(400).send({ error: 'Session ID is required' });
+      }
+      await updateTotalMeals(sessionId, true)
+      await updateMealsInDiet(sessionId, in_diet, true)
+      await updateSequenceOfMealsInDiet(sessionId)
+
+      return res.status(201).send()
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).send({
+          error: 'Validation error',
+          details: error.errors
+        })
+      }
+
+      console.log(error)
+      return res.status(500).send({ error: 'Internal Server Error' })
     }
 
-    // Cria a refeição associada ao usuário
-    await knex('meals').insert({
-      id: randomUUID(),
-      name,
-      description,
-      in_diet,
-      created_at: dateFormatter(new Date()),
-      session_id: sessionId
-    })
-
-    if (!sessionId) {
-      return res.status(400).send({ error: 'Session ID is required' });
-    }
-    await updateTotalMeals(sessionId, true)
-    await updateMealsInDiet(sessionId, in_diet, true)
-    await updateSequenceOfMealsInDiet(sessionId)
-
-    return res.status(201).send()
   })
 
   // get '/list-meals'

@@ -1,21 +1,87 @@
+import { randomUUID } from 'node:crypto'
 import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { app } from '../src/app'
 import { knex } from '../src/database'
 
+let sessionIdPhill: string
+let sessionIdJane: string
+
 beforeAll(async () => {
   await knex('meals').truncate()
   await app.ready()
+
+  await knex('users').insert([
+    {
+      id: randomUUID(),
+      name: 'Phill Doe',
+      email: 'pd@example.com',
+      session_id: 'phillsession',
+      metrics: JSON.stringify({
+        totalMeals: 0,
+        totalMealsInDiet: 0,
+        totalMealsOutDiet: 0,
+        sequenceOfMealsInTheDiet: 0,
+      })
+    },
+    {
+      id: randomUUID(),
+      name: 'Jane Doe',
+      email: 'jd@example.com',
+      session_id: 'janession',
+      metrics: JSON.stringify({
+        totalMeals: 0,
+        totalMealsInDiet: 0,
+        totalMealsOutDiet: 0,
+        sequenceOfMealsInTheDiet: 0,
+      })
+    }
+  ])
+
+  const users = await knex('users').select('session_id', 'email');
+  sessionIdPhill = users.find((user) => user.email === 'pd@example.com')?.session_id || '';
+  sessionIdJane = users.find((user) => user.email === 'jd@example.com')?.session_id || '';
 })
 
 afterAll(async () => {
+  await knex('users').del()
   await app.close()
 })
 
 describe('Meals Routes', () => {
   // POST '/create-meal'
-  describe('Create a new meal tests', () => {
-    it.todo('User can register a new meal', async () => { })
+  describe('POST /create-meal', () => {
+    it('should be able to create a meal for a user', async () => {
+      const response = await request(app.server)
+        .post('/meal/create-meal')
+        .set('Cookie', [`sessionId=${sessionIdPhill}`])
+        .send({
+          name: 'Breakfast',
+          description: 'Apple with banana',
+          in_diet: true
+        })
+
+      expect(response.status).toBe(201)
+
+      const meal = await knex('meals').where({ name: 'Breakfast' }).first()
+
+      if (meal) {
+        expect(meal).toBeDefined()
+        expect(meal.name).toBe('Breakfast');
+        expect(meal.in_diet).toBe(1);
+      }
+
+      const user = await knex('users').where({ session_id: sessionIdPhill }).first()
+
+      if (user && typeof user.metrics === 'string') {
+        const metrics = JSON.parse(user.metrics);
+        expect(metrics.totalMeals).toBe(1);
+        expect(metrics.totalMealsInDiet).toBe(1);
+        expect(metrics.totalMealsOutDiet).toBe(0);
+        expect(metrics.sequenceOfMealsInTheDiet).toBe(1); // Sequência incrementada
+      }
+
+    })
   })
 
   // GET '/list-meals'
