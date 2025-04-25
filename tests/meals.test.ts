@@ -110,8 +110,32 @@ describe('Meals Routes', () => {
   })
 
   // GET '/list-meals'
-  describe('Get meals list tests', () => {
-    it.todo('User can get the meals list', async () => { })
+  describe('GET /list-meals', () => {
+    it('User can get the meals list', async () => {
+      const response = await request(app.server)
+        .get('/meal/list-meals')
+        .set('Cookie', [`sessionId=${sessionIdPhill}`])
+
+      // console.log(response.body.meals)
+      expect(response.status).toBe(200)
+      expect(Array.isArray(response.body.meals)).toBe(true)
+      expect(response.body.meals).toHaveLength(1)
+
+      response.body.meals.forEach((meal: any) => {
+        meal.in_diet = Boolean(meal.in_diet)
+
+        expect(meal).toEqual(
+          expect.objectContaining({
+            id: expect.any(String),
+            name: expect.any(String),
+            description: expect.any(String),
+            in_diet: expect.any(Boolean),
+            created_at: expect.any(String),
+            session_id: expect.any(String),
+          })
+        )
+      })
+    })
   })
 
   // GET '/:id'
