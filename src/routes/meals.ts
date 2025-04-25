@@ -69,15 +69,33 @@ export const mealsRoutes = async (app: FastifyInstance) => {
 
   // get '/list-meals'
   app.get('/list-meals', async (req, res) => {
-    const sessionId = req.cookies.sessionId;
+    try {
+      const sessionId = req.cookies.sessionId;
 
-    const meals = await knex('meals')
-      .where({ session_id: sessionId })
-      .select()
+      if (!sessionId) {
+        return res.status(400).send({ error: 'Session ID is required' });
+      }
 
-    return {
-      meals
+      const meals = await knex('meals')
+        .where({ session_id: sessionId })
+        .select()
+
+      const formattedMeals = meals.map((meal) => ({
+        ...meal,
+        in_diet: Boolean(meal.in_diet), // Converte para booleano
+      }));
+
+      // console.log(formattedMeals)
+
+      return res.status(200).send({ meals: formattedMeals })
+
+    } catch (error) {
+      console.error('Error fetching meals:', error);
+
+
+      return res.status(500).send({ error: 'Internal Server Error' })
     }
+
   })
 
   // get '/:id'
