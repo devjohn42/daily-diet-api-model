@@ -192,30 +192,44 @@ export const mealsRoutes = async (app: FastifyInstance) => {
 
   // delete '/:id'
   app.delete('/meals/:id', async (req, res) => {
-    const getMealParamsSchema = z.object({
-      id: z.string().uuid(),
-    })
+    try {
+      const getMealParamsSchema = z.object({
+        id: z.string().uuid(),
+      })
 
-    const { id } = getMealParamsSchema.parse(req.params)
+      const sessionId = req.cookies.sessionId;
 
-    const sessionId = req.cookies.sessionId;
+      if (!sessionId) {
+        return res.status(401).send({ error: 'Unauthorized: Session ID is required!' });
+      }
 
-    const meal = await knex('meals')
-      .where({ id })
-      .andWhere({ session_id: sessionId })
-      .first();
+      const { id } = getMealParamsSchema.parse(req.params)
 
-    if (!meal) {
-      return res.status(404).send({ error: 'Meal not found' });
+
+      const meal = await knex('meals')
+        .where({ id })
+        .andWhere({ session_id: sessionId })
+        .first();
+
+      if (!meal) {
+        return res.status(404).send({ error: 'Meal not found' });
+      }
+
+      await knex('meals').where({ id }).delete()
+
+      await updateTotalMeals(sessionId, false)
+      await updateMealsInDiet(sessionId, meal.in_diet, false)
+      await updateSequenceOfMealsInDiet(sessionId)
+
+      return res.status(204).send()
+
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(500).send({
+          error: 'Internal Server Error',
+          details: error.errors
+        })
+      }
     }
-
-    await knex('meals').where({ id }).delete()
-
-    if (!sessionId) {
-      return res.status(400).send({ error: 'Session ID is required' });
-    }
-    await updateTotalMeals(sessionId, false)
-    await updateMealsInDiet(sessionId, meal.in_diet, false)
-    await updateSequenceOfMealsInDiet(sessionId)
   })
 }

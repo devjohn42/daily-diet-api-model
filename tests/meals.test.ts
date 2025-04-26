@@ -1,9 +1,11 @@
+import { execSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import request from 'supertest'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { app } from '../src/app'
 import { knex } from '../src/database'
 import { dateFormatter } from '../src/helpers/date-formatter'
+import { updateMealsInDiet, updateSequenceOfMealsInDiet, updateTotalMeals } from '../src/services/user-metrics-service'
 
 let sessionIdPhill: string
 let sessionIdJane: string
@@ -47,6 +49,9 @@ beforeAll(async () => {
 afterAll(async () => {
   await knex('users').del()
   await app.close()
+
+  execSync('npm run knex:rollback-all')
+  execSync('npm run knex:migrate-run')
 })
 
 describe('Meals Routes', () => {
@@ -282,7 +287,7 @@ describe('Meals Routes', () => {
           in_diet: 'not-a-boolean', // Valor inválido (não é booleano)
         });
 
-      console.log(response.body)
+      // console.log(response.body)
 
       expect(response.status).toBe(400);
 
@@ -293,7 +298,41 @@ describe('Meals Routes', () => {
   })
 
   // DELETE '/:id'
-  describe('Delte meal by id tests', () => {
-    it.todo('User can delete the meal by id', async () => { })
+  describe('DELETE /:id', () => {
+    it('should be able to delete a meal by id', async () => {
+      // Insere uma refeição no banco de dados para o teste
+      const [meal] = await knex('meals').insert(
+        {
+          id: randomUUID(),
+          name: 'Lunch',
+          description: 'Grilled chicken with salad',
+          in_diet: true,
+          created_at: dateFormatter(new Date()),
+          session_id: sessionIdPhill,
+        },
+        ['id']
+      );
+
+      // Faz a requisição para deletar a refeição
+      const response = await request(app.server)
+        .delete(`/meal/meals/${meal.id}`)
+        .set('Cookie', [`sessionId=${sessionIdPhill}`]);
+
+      // Verifica o status da resposta
+      expect(response.status).toBe(204);
+
+      // Verifica se a refeição foi removida do banco de dados
+      const deletedMeal = await knex('meals').where({ id: meal.id }).first();
+      expect(deletedMeal).toBeUndefined();
+    })
+    it('should return 404 if the meal does not exist', async () => {
+      const response = await request(app.server)
+        .get('/meal/meals/non-existent-id')
+        .set('Cookie', [`sessionId=${sessionIdJane}`])
+
+      expect(response.status).toBe(404)
+
+      expect(response.body).toHaveProperty('error', 'Meal Not Found')
+    });
   })
 })
