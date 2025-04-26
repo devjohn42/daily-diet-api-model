@@ -17,7 +17,7 @@ export const mealsRoutes = async (app: FastifyInstance) => {
   app.post('/create-meal', async (req, res) => {
     try {
       const createMealsBodySchema = z.object({
-        name: z.string(),
+        name: z.string().min(5, 'Name must be at least 5 characteres long'),
         description: z.string(),
         in_diet: z.boolean()
       })
@@ -98,73 +98,96 @@ export const mealsRoutes = async (app: FastifyInstance) => {
 
   })
 
-  // get '/:id'
+  // get 'meals/:id'
   app.get('/meals/:id', async (req, res) => {
-    const getMealParamsSchema = z.object({
-      id: z.string().uuid()
-    })
+    try {
+      const getMealParamsSchema = z.object({
+        id: z.string().uuid()
+      })
 
-    const { id } = getMealParamsSchema.parse(req.params)
+      const { id } = getMealParamsSchema.parse(req.params)
 
-    const sessionId = req.cookies.sessionId;
+      const sessionId = req.cookies.sessionId;
 
-    const meal = await knex('meals')
-      .where({ id })
-      .andWhere({ session_id: sessionId })
-      .first()
+      const meal = await knex('meals')
+        .where({ id })
+        .andWhere({ session_id: sessionId })
+        .first()
 
-    if (!meal) {
-      return res.status(404).send({ error: 'Meal not found' });
-    }
+      if (!meal?.id) {
+        return res.status(404).send({ error: 'Meal not found' });
+      }
 
-    return {
-      meal
+      const formattedMeal = {
+        ...meal,
+        in_diet: Boolean(meal.in_diet), // Converte para booleano
+      };
+
+      // console.log(formattedMeal)
+      return res.status(200).send({ meal: formattedMeal })
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(404).send({
+          error: 'Meal Not Found',
+          details: error.errors
+        })
+      }
     }
   })
 
   // patch '/:id'
   app.patch('/meals/:id', async (req, res) => {
-    const getMealParamsSchema = z.object({
-      id: z.string().uuid(),
-    })
+    try {
+      const getMealParamsSchema = z.object({
+        id: z.string().uuid(),
+      })
 
-    const updateMealBodySchema = z.object({
-      name: z.string().optional(),
-      description: z.string().optional(),
-      in_diet: z.boolean().optional()
-    })
+      const updateMealBodySchema = z.object({
+        name: z.string().min(5, 'Name must be at least 5 characteres long').optional(),
+        description: z.string().optional(),
+        in_diet: z.boolean().optional()
+      })
 
-    const { id } = getMealParamsSchema.parse(req.params)
+      const { id } = getMealParamsSchema.parse(req.params)
 
-    const { name, description, in_diet } = updateMealBodySchema.parse(req.body)
+      const { name, description, in_diet } = updateMealBodySchema.parse(req.body)
 
-    const sessionId = req.cookies.sessionId;
+      const sessionId = req.cookies.sessionId;
 
-    const meal = await knex('meals')
-      .where({ id })
-      .andWhere({ session_id: sessionId })
-      .first();
+      const meal = await knex('meals')
+        .where({ id })
+        .andWhere({ session_id: sessionId })
+        .first();
 
-    if (!meal) {
-      return res.status(404).send({ error: 'Meal not found' });
+      if (!meal) {
+        return res.status(404).send({ error: 'Meal not found' });
+      }
+
+      if (!sessionId) {
+        return res.status(400).send({ error: 'Session ID is required' });
+      }
+
+      if (meal.in_diet !== in_diet) {
+        await updateMealsInDiet(sessionId, meal.in_diet, false)
+        await updateMealsInDiet(sessionId, meal.in_diet, true)
+      }
+
+      await knex('meals')
+        .where({ id })
+        .update({ name, description, in_diet })
+
+      await updateSequenceOfMealsInDiet(sessionId)
+
+      return res.status(200).send()
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).send({
+          error: 'Validation error',
+          details: error.errors
+        })
+      }
     }
 
-    if (!sessionId) {
-      return res.status(400).send({ error: 'Session ID is required' });
-    }
-
-    if (meal.in_diet !== in_diet) {
-      await updateMealsInDiet(sessionId, meal.in_diet, false)
-      await updateMealsInDiet(sessionId, meal.in_diet, true)
-    }
-
-    await knex('meals')
-      .where({ id })
-      .update({ name, description, in_diet })
-
-    await updateSequenceOfMealsInDiet(sessionId)
-
-    return res.status(200).send()
   })
 
   // delete '/:id'

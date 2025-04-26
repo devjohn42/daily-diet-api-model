@@ -3,6 +3,7 @@ import request from 'supertest'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { app } from '../src/app'
 import { knex } from '../src/database'
+import { dateFormatter } from '../src/helpers/date-formatter'
 
 let sessionIdPhill: string
 let sessionIdJane: string
@@ -139,13 +140,156 @@ describe('Meals Routes', () => {
   })
 
   // GET '/:id'
-  describe('Get meal by id tests', () => {
-    it.todo('User can get the meal by id', async () => { })
+  describe('GET /:id', () => {
+    it('should be able to get the meal by id', async () => {
+      const [meal] = await knex('meals').insert({
+        id: randomUUID(),
+        name: 'Dinner',
+        description: 'Steak with vegetables',
+        in_diet: true,
+        created_at: dateFormatter(new Date()),
+        session_id: sessionIdJane
+      }, ['id'])
+      const response = await request(app.server)
+        .get(`/meal/meals/${meal.id}`) //meal.id
+        .set('Cookie', [`sessionId=${sessionIdJane}`])
+
+
+      expect(response.status).toBe(200)
+
+      expect(response.body.meal).toEqual(
+        expect.objectContaining({
+          id: meal.id,
+          name: 'Dinner',
+          description: 'Steak with vegetables',
+          in_diet: true,
+          session_id: sessionIdJane,
+          created_at: expect.any(String)
+        })
+      )
+    })
+    it('should return 404 if the meal does not exist', async () => {
+      const response = await request(app.server)
+        .get('/meal/meals/non-existent-id')
+        .set('Cookie', [`sessionId=${sessionIdJane}`])
+
+      expect(response.status).toBe(404)
+
+      expect(response.body).toHaveProperty('error', 'Meal Not Found')
+    })
+    it('should return 401 if sessionId is not provided', async () => {
+      const [meal] = await knex('meals').insert({
+        id: randomUUID(),
+        name: 'Junk Food',
+        description: 'Hamburguer',
+        in_diet: false,
+        created_at: dateFormatter(new Date()),
+        session_id: sessionIdJane
+      }, ['id'])
+
+      const response = await request(app.server).get(`/meal/meals/${meal.id}`)
+
+      expect(response.status).toBe(401)
+      expect(response.body).toHaveProperty('error', 'Unauthorized!')
+    })
   })
 
   // PATCH '/:id'
-  describe('Update meal by id tests', () => {
-    it.todo('User can update the meal by id', async () => { })
+  describe('PATCH /:id', () => {
+    it('should be able to update the meal by id', async () => {
+      const [meal] = await knex('meals').insert({
+        id: randomUUID(),
+        name: 'Dinner',
+        description: 'Past with cheese',
+        in_diet: false,
+        created_at: dateFormatter(new Date()),
+        session_id: sessionIdJane
+      }, ['id'])
+      const response = await request(app.server)
+        .patch(`/meal/meals/${meal.id}`)
+        .set('Cookie', [`sessionId=${sessionIdJane}`])
+        .send({
+          description: 'Organic pasta with vegetables',
+          in_diet: true,
+
+        })
+
+      expect(response.status).toBe(200)
+
+      const updatedMeal = await knex('meals').where({ id: meal.id }).first()
+
+      // console.log(updatedMeal)
+
+      expect(updatedMeal?.description).toEqual('Organic pasta with vegetables')
+      expect(Boolean(updatedMeal?.in_diet)).toEqual(true)
+      expect(updatedMeal).toEqual(
+        expect.objectContaining({
+          id: meal.id,
+          name: 'Dinner',
+          description: 'Organic pasta with vegetables',
+          in_diet: updatedMeal?.in_diet,
+          session_id: sessionIdJane,
+        })
+      );
+    })
+    it('should return 404 if the meal does not exist', async () => {
+      const response = await request(app.server)
+        .get('/meal/meals/non-existent-id')
+        .set('Cookie', [`sessionId=${sessionIdJane}`])
+
+      expect(response.status).toBe(404)
+
+      expect(response.body).toHaveProperty('error', 'Meal Not Found')
+    })
+    it('should return 401 if sessionId is not provided', async () => {
+      const [meal] = await knex('meals').insert({
+        id: randomUUID(),
+        name: 'Dinner',
+        description: 'Past with cheese',
+        in_diet: false,
+        created_at: dateFormatter(new Date()),
+        session_id: sessionIdJane
+      }, ['id'])
+      const response = await request(app.server)
+        .patch(`/meal/meals/${meal.id}`)
+        .send({
+          description: 'Organic pasta with vegetables',
+          in_diet: true,
+
+        })
+      expect(response.status).toBe(401)
+      expect(response.body).toHaveProperty('error', 'Unauthorized!')
+    })
+    it('shoudl return 400 if the request body is invalid', async () => {
+      const [meal] = await knex('meals').insert(
+        {
+          id: randomUUID(),
+          name: 'Snack',
+          description: 'Protein bar',
+          in_diet: true,
+          created_at: dateFormatter(new Date()),
+          session_id: sessionIdJane,
+        },
+        ['id']
+      );
+
+      const response = await request(app.server)
+        .patch(`/meal/meals/${meal.id}`)
+        .set('Cookie', [`sessionId=${sessionIdJane}`])
+        .send({
+          name: '', // Nome inválido (vazio)
+          description: 123, // Descrição inválida (não é string)
+          in_diet: 'not-a-boolean', // Valor inválido (não é booleano)
+        });
+
+      console.log(response.body)
+
+      expect(response.status).toBe(400);
+
+      expect(response.body).toHaveProperty('error', 'Validation error');
+      expect(response.body).toHaveProperty('details');
+      expect(Array.isArray(response.body.details)).toBe(true);
+    })
   })
 
   // DELETE '/:id'
