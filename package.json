@@ -2,13 +2,17 @@
   "name": "daily-diet-api-model",
   "version": "1.0.0",
   "main": "index.js",
+  "engines": {
+    "node": ">= 18"
+  },
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "knex:migrate": "node --import tsx ./node_modules/knex/bin/cli.js migrate:make",
     "knex:migrate-run": "node --import tsx ./node_modules/knex/bin/cli.js migrate:latest",
     "knex:rollback": "node --import tsx ./node_modules/knex/bin/cli.js migrate:rollback",
     "knex:rollback-all": "node --import tsx ./node_modules/knex/bin/cli.js migrate:rollback --all",
-    "test": "vitest"
+    "build": "tsup src --out-dir build",
+    "test": "cross-env NODE_ENV=test node --import tsx ./node_modules/knex/bin/cli.js migrate:latest && vitest"
   },
   "keywords": [],
   "author": "",
@@ -16,19 +20,21 @@
   "description": "",
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
-    "@types/supertest": "^6.0.3",
     "dotenv": "^16.4.7",
     "fastify": "^5.2.2",
     "knex": "^3.1.0",
+    "pg": "^8.15.6",
     "sqlite3": "^5.1.7",
-    "supertest": "^7.1.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
     "@rocketseat/eslint-config": "^2.2.2",
     "@types/node": "^22.14.0",
+    "@types/supertest": "^6.0.3",
     "cross-env": "^7.0.3",
     "eslint": "^8.57.1",
+    "supertest": "^7.1.0",
+    "tsup": "^8.4.0",
     "tsx": "^4.19.3",
     "typescript": "^5.8.3",
     "vitest": "^3.1.2"
